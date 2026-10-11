@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sklad – Mini E-shop</title>
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<header><div class="bar"><span class="logo">📦 Sklad</span><nav id="nav"></nav>
+  <span class="sp row" style="margin:0"><label class="mut" for="user">Skladník</label><input id="user" maxlength="40" placeholder="jméno" style="width:140px"></span></div></header>
+<main id="app"></main>
+<div id="toast"></div>
+<script src="store.js"></script>
+<script>
+const $=s=>document.querySelector(s),app=$('#app'),C=Store.get.col;
+const TABS=[['tasks','Připravené objednávky'],['batches','Picking batche'],['locs','Lokace']];
+const BST={OPEN:'Připravený',IN_PROGRESS:'Probíhá',DONE:'Dokončený',CANCELLED:'Zrušený'};
+let view='tasks',bid=null,selT=new Set(),lastErr='',toastT;
+const user=()=>Store.session.get().user;
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2400)};
+const tbl=(h,r)=>`<div class="wrap"><table><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${r.join('')||`<tr><td colspan="${h.length}" class="mut">Žádná data.</td></tr>`}</table></div>`;
+const bTag=s=>`<span class="tag${s==='DONE'?' ok':s==='CANCELLED'?' err':s==='IN_PROGRESS'?' warn':''}">${esc(BST[s]||s)}</span>`;
+const sum=(a,k)=>a.reduce((x,l)=>x+l[k],0);
+
+function viewTasks(){
+  const os=C('orders'),ts=C('tasks').filter(t=>t.status==='OPEN');
+  selT=new Set([...selT].filter(id=>ts.some(t=>t.id===id)));
+  app.innerHTML=`<h1>Připravené objednávky</h1>`+(ts.length?`<div class="row"><button data-act="mkbatch"${selT.size?'':' disabled'}>Vytvořit picking batch (${selT.size})</button><button class="sec" data-act="selall">Vybrat vše</button></div>`:'')
+   +tbl(['','Objednávka','Zákazník','Řádky / ks','Pozice'],ts.map(t=>{const o=os.find(x=>x.id===t.orderId)||{customerSnapshot:{}};
+     return `<tr><td><input type="checkbox" data-act="seltask" data-id="${esc(t.id)}"${selT.has(t.id)?' checked':''}></td><td>${esc(o.number)}<div class="mut">${esc(t.id)}</div></td><td>${esc(o.customerSnapshot.name)}</td><td>${t.lines.length} / ${sum(t.lines,'qtyRequired')}</td><td>${[...new Set(t.lines.map(l=>l.locationId))].map(esc).join(', ')}</td></tr>`}))
+   +(ts.length?'':'<p class="mut">Nic nečeká na vychystání. Admin musí zaplacenou objednávku nejdřív předat skladu.</p>');
+}
+function viewBatches(){
+  app.innerHTML=`<h1>Picking batche</h1>`+tbl(['Batch','Stav','Objednávky','Řádky','Skladník',''],C('batches').slice().reverse().map(b=>`<tr><td>${esc(b.id)}<div class="mut">${esc(fmtDate(b.createdAt))}</div></td><td>${bTag(b.status)}</td><td>${b.taskIds.length}</td><td>${b.lines.filter(l=>l.qtyPicked>=l.qtyRequired).length} / ${b.lines.length}</td><td>${esc(b.assignee||'–')}</td><td class="r"><button class="sec" data-act="open" data-id="${esc(b.id)}">Otevřít</button></td></tr>`));
+}
+function viewLocs(){
+  const st=C('stock'),locs=C('locations');
+  app.innerHTML=`<h1>Skladové lokace</h1>`+locs.map(l=>`<div class="card"><div class="loc" style="font-size:1.6rem">${esc(l.code)}</div>${tbl(['Produkt','EAN','Skladem','Rezervováno'],st.filter(s=>s.locationId===l.code).map(s=>`<tr><td>${esc(Store.get.vname(s.variantId))}</td><td>${esc((Store.get.variant(s.variantId)||{}).ean)}</td><td>${s.onHand}</td><td>${s.reserved}</td></tr>`))}</div>`).join('');
+}
+
+function viewBatch(keep){
+  const b=C('batches').find(x=>x.id===bid);
+  if(!b){view='batches';return render()}
+  const tasks=C('tasks'),os=C('orders'),cur=b.status==='IN_PROGRESS'?b.lines.find(l=>l.qtyPicked<l.qtyRequired):null;
+  const pc=sum(b.lines,'qtyPicked'),pt=sum(b.lines,'qtyRequired');
+  const saved=keep?['loc','ean','qty'].map(id=>$('#'+id)&&$('#'+id).value):null;
+  let h=`<p><a href="#" data-act="view" data-id="batches">← Batche</a></p><h1>${esc(b.id)} ${bTag(b.status)}</h1>
+   <p class="mut">Objednávky: ${b.taskIds.map(id=>{const t=tasks.find(x=>x.id===id),o=t&&os.find(x=>x.id===t.orderId);return esc(o?o.number:id)}).join(', ')||'–'} · skladník: ${esc(b.assignee||'–')} · vychystáno ${pc} / ${pt} ks</p>
+   <div class="bar2"><i style="width:${pt?Math.round(pc/pt*100):0}%"></i></div>`;
+  if(b.status==='OPEN')h+=`<div class="note">Batch je připravený. Zadejte jméno skladníka (nahoře) a zahajte picking.</div><button data-act="start" data-id="${esc(b.id)}">Zahájit picking</button>`;
+  if(cur){
+    const rem=cur.qtyRequired-cur.qtyPicked,v=Store.get.variant(cur.variantId)||{};
+    const here=C('stock').filter(s=>s.locationId===cur.locationId);
+    h+=`<form id="pk" class="card" novalidate><div class="mut">Jděte na pozici</div><div class="loc">${esc(cur.locationId)}</div>
+     <p><b>${esc(Store.get.vname(cur.variantId))}</b> <span class="mut">${esc(v.sku)}</span></p><p>Zbývá vychystat <b>${rem} ks</b> <span class="mut">(z ${cur.qtyRequired})</span></p>
+     <p class="mut">Na pozici je: ${here.map(s=>esc(Store.get.vname(s.variantId))+' – '+s.onHand+' ks').join('; ')}</p><div id="err"></div>
+     <div class="f"><label for="loc">1. Naskenujte pozici</label><input id="loc" autocomplete="off"></div>
+     <div class="f"><label for="ean">2. Naskenujte EAN produktu</label><input id="ean" autocomplete="off" inputmode="numeric"></div>
+     <div class="f"><label for="qty">3. Množství</label><input id="qty" type="number" min="1" max="${rem}" value="${rem}"></div>
+     <button type="submit">Potvrdit pick</button>
+     <details style="margin-top:10px"><summary class="mut">Nápověda pro výuku</summary><span class="mut">Pozice: <b>${esc(cur.locationId)}</b> · EAN: <b>${esc(v.ean)}</b></span></details></form>`;
+  }
+  if(b.status==='IN_PROGRESS')h+=`<div class="row"><button data-act="complete" data-id="${esc(b.id)}"${cur?' disabled':''}>Dokončit picking</button>${cur?'<span class="mut">Dokončit lze až po vychystání všech řádků.</span>':'<span class="mut">Vše vychystáno.</span>'}</div>`;
+  h+=`<h2>Řádky batche (seřazeno podle pozice)</h2>`+tbl(['Pozice','Produkt','EAN','Vychystáno',''],b.lines.map(l=>{const d=l.qtyPicked>=l.qtyRequired;return `<tr><td>${esc(l.locationId)}</td><td>${esc(Store.get.vname(l.variantId))}</td><td>${esc((Store.get.variant(l.variantId)||{}).ean)}</td><td>${l.qtyPicked} / ${l.qtyRequired}</td><td>${d?'<span class="tag ok">✓</span>':l===cur?'<span class="tag warn">→ nyní</span>':'<span class="tag">○</span>'}</td></tr>`}));
+  app.innerHTML=h;
+  if($('#err')&&lastErr)$('#err').innerHTML=`<div class="alert" role="alert">${esc(lastErr)}</div>`;
+  if(saved)['loc','ean','qty'].forEach((id,i)=>{if($('#'+id)&&saved[i]!=null&&saved[i]!=='')$('#'+id).value=saved[i]});
+  if($('#loc')&&!keep)$('#loc').focus();
+}
+
+function render(keep){
+  if(!Store.get.ready()){app.innerHTML='<div class="alert">V úložišti nejsou žádná data. Otevřete nejdřív <a href="mini-eshop.html">mini-eshop.html</a> (nahraje demo data) ze stejného originu a složky.</div>';return}
+  const n=C('tasks').filter(t=>t.status==='OPEN').length;
+  $('#nav').innerHTML=TABS.map(([k,l])=>`<a href="#" class="${(k===view||(view==='batch'&&k==='batches'))?'on':''}" data-act="view" data-id="${k}">${l}${k==='tasks'&&n?` (${n})`:''}</a>`).join('');
+  if(document.activeElement!==$('#user'))$('#user').value=user();
+  ({tasks:viewTasks,batches:viewBatches,locs:viewLocs,batch:()=>viewBatch(keep)})[view]();
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const act=b.dataset.act,id=b.dataset.id;if(b.tagName==='A')e.preventDefault();
+  if(act==='view'){view=id;lastErr='';render()}
+  else if(act==='seltask'){selT.has(id)?selT.delete(id):selT.add(id);render()}
+  else if(act==='selall'){C('tasks').filter(t=>t.status==='OPEN').forEach(t=>selT.add(t.id));render()}
+  else if(act==='mkbatch'){const r=Store.cmd.createBatch([...selT],user());if(r.ok){selT.clear();bid=r.data.id;view='batch';lastErr='';toast('Vytvořen '+r.data.id)}else toast(r.message);render()}
+  else if(act==='open'){bid=id;view='batch';lastErr='';render()}
+  else if(act==='start'){const r=Store.cmd.startBatch(id,user());toast(r.ok?'Picking zahájen':r.message);lastErr='';render()}
+  else if(act==='complete'){const r=Store.cmd.completeBatch(id,user());toast(r.ok?'Picking dokončen – objednávky vychystány':r.message);render()}
+});
+document.addEventListener('input',e=>{if(e.target.id==='user')Store.session.set({user:e.target.value.slice(0,40)})});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  const nx={loc:'ean',ean:'qty'}[e.target.id];if(nx){e.preventDefault();$('#'+nx).focus()}
+});
+document.addEventListener('submit',e=>{
+  if(e.target.id!=='pk')return;e.preventDefault();
+  const b=C('batches').find(x=>x.id===bid),cur=b&&b.lines.find(l=>l.qtyPicked<l.qtyRequired);if(!cur)return;
+  const r=Store.cmd.pick(bid,cur.key,$('#loc').value,$('#ean').value,$('#qty').value,user());
+  if(r.ok){lastErr='';toast('Vychystáno '+$('#qty').value+' ks');render(false)}else{lastErr=r.message;render(true);$(r.code==='WRONG_LOCATION'?'#loc':r.code==='WRONG_EAN'?'#ean':'#qty').select()}
+});
+Store.subscribe(()=>render(true));
+render();
+</script>
+</body>
+</html>

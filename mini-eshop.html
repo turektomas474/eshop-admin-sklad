@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mini E-shop</title>
+<style>
+:root{--bg:#f6f5f2;--fg:#1d1d1b;--mut:#6b6b66;--card:#fff;--line:#e3e1db;--acc:#1f6f5c;--accfg:#fff;--acc2:#e8f2ef;--err:#b3261e;--warn:#9a6700}
+@media(prefers-color-scheme:dark){:root{--bg:#161614;--fg:#eeeee9;--mut:#9a9a93;--card:#1f1f1d;--line:#34342f;--acc:#4fb39b;--accfg:#10201c;--acc2:#1d2e29;--err:#f2867e;--warn:#e3b341}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.bar{max-width:1080px;margin:auto;padding:12px 16px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.logo{font-weight:700;font-size:1.15rem;color:var(--fg);text-decoration:none}
+nav{display:flex;gap:16px;margin-left:auto}
+nav a{color:var(--fg);text-decoration:none;padding:4px 0;border-bottom:2px solid transparent}
+nav a:hover{border-color:var(--acc)}
+.badge{background:var(--acc);color:var(--accfg);border-radius:99px;padding:0 7px;font-size:.8rem;margin-left:4px}
+main{max-width:1080px;margin:auto;padding:20px 16px 60px}
+h1{font-size:1.6rem;margin:.2em 0 .6em}h2{font-size:1.15rem;margin:1.2em 0 .5em}
+a{color:var(--acc)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.pc{display:block;color:inherit;text-decoration:none;padding:0;overflow:hidden}
+.pc:hover{border-color:var(--acc)}.pc .in{padding:12px 14px 14px}
+.ph{aspect-ratio:4/3;display:grid;place-items:center;font-size:3.4rem;background:hsl(var(--h) 45% 55%/.22)}
+.ph.big{aspect-ratio:1;font-size:7rem;border-radius:12px}
+.price{font-weight:700}.mut{color:var(--mut);font-size:.9rem}
+.tag{display:inline-block;font-size:.8rem;padding:1px 8px;border-radius:99px;background:var(--acc2);color:var(--acc)}
+.tag.warn{background:transparent;border:1px solid var(--warn);color:var(--warn)}.tag.err{background:transparent;border:1px solid var(--err);color:var(--err)}
+.tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+input,select,button{font:inherit;color:inherit}
+input,select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);width:100%}
+.tools input,.tools select{width:auto;flex:1;min-width:140px}
+button,.btn{background:var(--acc);color:var(--accfg);border:0;border-radius:8px;padding:9px 16px;cursor:pointer;font-weight:600;text-decoration:none;display:inline-block}
+button.sec,.btn.sec{background:transparent;color:var(--fg);border:1px solid var(--line)}
+button.dng{background:transparent;color:var(--err);border:1px solid var(--err)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:28px}.co{display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:start}
+@media(max-width:760px){.two,.co{grid-template-columns:1fr}}
+.vars{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 16px}
+.vars button{background:var(--card);color:var(--fg);border:1px solid var(--line)}
+.vars button.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc2);color:var(--acc)}
+.vars button.x{opacity:.5;text-decoration:line-through}
+.qty{display:inline-flex;align-items:center;gap:8px}.qty button{padding:4px 12px}
+table{width:100%;border-collapse:collapse}td,th{padding:10px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+td.r,th.r{text-align:right}
+.f{display:grid;gap:4px;margin-bottom:12px}.f label{font-size:.9rem;color:var(--mut)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.opt{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;cursor:pointer}
+.opt input{width:auto}.opt span:last-child{margin-left:auto;font-weight:600}
+.sum div{display:flex;justify-content:space-between;padding:3px 0}.sum .t{font-weight:700;font-size:1.1rem;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
+.alert{padding:10px 14px;border-radius:8px;margin:10px 0;border:1px solid var(--err);color:var(--err)}
+.note{padding:10px 14px;border-radius:8px;margin:10px 0;background:var(--acc2)}
+.tl{list-style:none;padding:0;margin:12px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.tl li{padding:8px;border:1px solid var(--line);border-radius:8px;color:var(--mut);font-size:.92rem}
+.tl li.d{color:var(--fg);border-color:var(--acc);background:var(--acc2)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:8px;opacity:0;transition:.25s;pointer-events:none;z-index:9}
+#toast.on{opacity:1}
+footer{max-width:1080px;margin:auto;padding:0 16px 40px;color:var(--mut);font-size:.85rem}
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <a class="logo" href="#/">🛍 Mini E-shop</a>
+  <nav><a href="#/">Katalog</a><a href="#/orders">Moje objednávky</a><a href="#/cart">Košík<span class="badge" id="cc">0</span></a></nav>
+</div></header>
+<main id="app"></main>
+<footer>
+  Výuková simulace · data v localStorage (<code>ecs.v1.*</code>) · tato aplikace vystupuje v roli <b>customer</b> ·
+  <a href="#" data-act="reset">Obnovit demo data</a>
+</footer>
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   STORE – jediné místo, které sahá do localStorage.
+   Až vzniknou Admin a Sklad, tento blok se přesune do shared/store.js
+   beze změny kontraktu (klíče, ID, stavy, přechody).
+   Role jsou jen simulace oprávnění, ne bezpečnost.
+   ===================================================================== */
+const Store=(()=>{
+const P='ecs.v1.';
+const FMT={product:['PRD-',4],variant:['VAR-',4],customer:['CUS-',4],order:['ORD-',6],task:['TSK-',4],movement:['MOV-',6],shipment:['SHP-',4],event:['EVT-',6]};
+const CATS={tricka:'Trička',mikiny:'Mikiny',doplnky:'Doplňky'};
+const SHIPPING={ppl:{name:'PPL – doručení na adresu',cents:7900},zasilkovna:{name:'Zásilkovna – výdejní místo',cents:5900,pickup:true},personal:{name:'Osobní odběr na skladě',cents:0}};
+const PICKUP=['Praha 1 – Václavské nám. 12','Praha 7 – Dukelských hrdinů 30','Brno – Masarykova 5','Ostrava – Stodolní 8'];
+const STATUS={NEW:'Nová',AWAITING_PAYMENT:'Čeká na platbu',PAID:'Zaplacená',HANDED_TO_WAREHOUSE:'Předaná skladu',PICKING:'Vychystává se',PACKED:'Zabalená',SHIPPED:'Odeslaná',DELIVERED:'Doručená',CANCELLED:'Stornovaná',RETURN_REQUESTED:'Žádost o vrácení',RETURNED:'Vrácená'};
+// [z, do, role]
+const TR=[['NEW','AWAITING_PAYMENT','customer'],['AWAITING_PAYMENT','PAID','customer'],['PAID','HANDED_TO_WAREHOUSE','admin'],['HANDED_TO_WAREHOUSE','PICKING','warehouse'],['PICKING','PACKED','warehouse'],['PACKED','SHIPPED','warehouse'],['SHIPPED','DELIVERED','admin'],['DELIVERED','RETURN_REQUESTED','customer,admin'],['RETURN_REQUESTED','RETURNED','warehouse'],['NEW','CANCELLED','customer,admin'],['AWAITING_PAYMENT','CANCELLED','customer,admin'],['PAID','CANCELLED','customer,admin'],['HANDED_TO_WAREHOUSE','CANCELLED','admin']];
+const now=()=>new Date().toISOString();
+const rd=(k,d)=>{try{const v=localStorage.getItem(P+k);return v?JSON.parse(v):d}catch(e){return d}};
+const wr=(k,v)=>localStorage.setItem(P+k,JSON.stringify(v));
+const subs=[];let timer=0;
+const fire=()=>{clearTimeout(timer);timer=setTimeout(()=>subs.forEach(f=>f()),40)};
+const bc='BroadcastChannel' in window?new BroadcastChannel('ecs'):null;
+if(bc)bc.onmessage=fire;
+addEventListener('storage',e=>{if(e.key&&e.key.startsWith(P)&&!e.key.includes('session.'))fire()});
+const notify=()=>{fire();bc&&bc.postMessage('chg')};
+const fail=(code,message,data)=>{throw Object.assign(new Error(message),{code,data})};
+
+/* Příkaz = jedna transakce: načíst → ověřit → zapsat vše → událost → notifikace. Při chybě se nezapíše nic. */
+function tx(fn){
+  const cache={};
+  const t={
+    get(k){if(!(k in cache))cache[k]=rd(k,k==='counters'?{}:[]);return cache[k]},
+    set(k,v){cache[k]=v},
+    id(type){const c=t.get('counters');c[type]=(c[type]||0)+1;return FMT[type][0]+String(c[type]).padStart(FMT[type][1],'0')},
+    ev(type,entity,payload,actor){t.get('events').push({id:t.id('event'),type,entity,actor,at:now(),payload})},
+    mov(m){t.get('movements').push({id:t.id('movement'),at:now(),...m})}
+  };
+  try{const data=fn(t);Object.keys(cache).forEach(k=>wr(k,cache[k]));notify();return{ok:true,data}}
+  catch(e){
+    if(e.code)return{ok:false,code:e.code,message:e.message,data:e.data};
+    if(e.name==='QuotaExceededError')return{ok:false,code:'STORAGE_FULL',message:'Úložiště je plné.'};
+    throw e;
+  }
+}
+const avail=(t,vid)=>t.get('stock').filter(s=>s.variantId===vid).reduce((a,s)=>a+s.onHand-s.reserved,0);
+
+function transition(t,o,to,role,actor,reason){
+  const from=o.status,r=TR.find(x=>x[0]===from&&x[1]===to);
+  if(!r)fail('INVALID_TRANSITION',`Přechod ${from} → ${to} není povolen.`);
+  if(!r[2].split(',').includes(role))fail('FORBIDDEN',`Role ${role} nesmí provést ${from} → ${to}.`);
+  const at=now();
+  o.statusHistory.push({from,to,at,actor,reason});o.status=to;o.rev++;o.updatedAt=at;
+  t.ev('order.'+to.toLowerCase(),{type:'order',id:o.id},{from,to},actor);
+}
+const slug=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+
+/* ---- seed ---- */
+const DEMO=[
+['Tričko Basic','tricka','Měkké bavlněné tričko střihu regular. 100 % bavlna, 180 g/m².',39900,'👕',200,[['černá','M',12],['černá','L',8],['bílá','M',5]]],
+['Tričko Logo','tricka','Tričko s potiskem loga na hrudi. Pevná bavlna, vyšší gramáž.',49900,'👕',20,[['bílá','S',3],['bílá','L',2],['zelená','M',0]]],
+['Mikina Hoodie','mikiny','Teplá mikina s kapucí a kapsou. Uvnitř jemný fleece.',119000,'🧥',150,[['zelená','L',4],['zelená','M',2],['černá','L',6]]],
+['Mikina Zip','mikiny','Mikina na zip, dvě kapsy, žebrované lemy.',139000,'🧥',260,[['šedá','M',7],['šedá','XL',3]]],
+['Čepice Merino','doplnky','Čepice z merino vlny, univerzální velikost.',29900,'🧶',340,[['antracit','',15]]],
+['Batoh Urban','doplnky','Městský batoh 22 l, voděodolný materiál. Na skladě je poslední kus.',189000,'🎒',30,[['černá','',1]]],
+['Ponožky 3 pack','doplnky','Sada tří párů sportovních ponožek. Momentálně vyprodáno.',19900,'🧦',90,[['mix','40–43',0]]]];
+const LOCS=['A-01-01','A-02-03','B-04-01','C-01-01'];
+function seed(){return tx(t=>{
+  const PR=[],VA=[],ST=[];
+  t.set('counters',{});t.set('movements',[]);t.set('events',[]);
+  DEMO.forEach(([name,cat,desc,price,emoji,hue,vars])=>{
+    const pid=t.id('product');
+    PR.push({id:pid,name,categoryId:cat,description:desc,active:true,vatRate:21,img:{emoji,hue},createdAt:now(),rev:1});
+    const pre=slug(name).split(' ').slice(0,2).map(w=>w.slice(0,3)).join('-');
+    vars.forEach(([color,size,qty])=>{
+      const vid=t.id('variant'),n=parseInt(vid.slice(4),10),loc=LOCS[n%LOCS.length];
+      VA.push({id:vid,productId:pid,sku:[pre,slug(color).slice(0,3),slug(size).replace(/\W/g,'')].filter(Boolean).join('-'),ean:'859000'+String(n).padStart(7,'0'),attrs:{color,size},priceCents:price,active:true});
+      ST.push({variantId:vid,locationId:loc,onHand:qty,reserved:0});
+      if(qty>0)t.mov({type:'RECEIPT',variantId:vid,locationId:loc,qty,refType:'SEED',refId:null,reason:'Počáteční naskladnění',actor:{app:'seed'}});
+    });
+  });
+  t.set('meta',{schemaVersion:1,seededAt:now()});
+  t.set('products',PR);t.set('variants',VA);t.set('stock',ST);
+  t.set('locations',LOCS.map(code=>({code,name:'Regál '+code})));
+  ['customers','orders','tasks','shipments'].forEach(k=>t.set(k,[]));
+  t.ev('system.seeded',{type:'system',id:'seed'},{products:PR.length},{app:'seed'});
+})}
+
+/* ---- veřejné API ---- */
+const G={
+  products:()=>rd('products',[]).filter(p=>p.active),
+  product:id=>rd('products',[]).find(p=>p.id===id),
+  variants:pid=>rd('variants',[]).filter(v=>v.productId===pid&&v.active),
+  variant:id=>rd('variants',[]).find(v=>v.id===id),
+  available:vid=>rd('stock',[]).filter(s=>s.variantId===vid).reduce((a,s)=>a+s.onHand-s.reserved,0),
+  order:id=>rd('orders',[]).find(o=>o.id===id),
+  ordersOf:cid=>rd('orders',[]).filter(o=>o.customerId===cid).reverse(),
+  customer:id=>rd('customers',[]).find(c=>c.id===id),
+  shipment:oid=>rd('shipments',[]).find(s=>s.orderId===oid)
+};
+const cmd={
+  createOrder(cart,c,sh){return tx(t=>{
+    if(!Array.isArray(cart)||!cart.length)fail('EMPTY_CART','Košík je prázdný.');
+    const m=SHIPPING[sh&&sh.method];
+    if(!m)fail('VALIDATION','Vyberte způsob dopravy.');
+    if(m.pickup&&!PICKUP.includes(sh.pickupPoint))fail('VALIDATION','Vyberte výdejní místo.');
+    if(!['card','transfer'].includes(sh.paymentMethod))fail('VALIDATION','Vyberte způsob platby.');
+    const req=(v,l)=>{if(!String(v||'').trim())fail('VALIDATION','Vyplňte pole: '+l)};
+    req(c.name,'jméno');req(c.street,'ulice');req(c.city,'město');req(c.zip,'PSČ');
+    if(!/^\S+@\S+\.\S+$/.test(c.email||''))fail('VALIDATION','Zadejte platný e-mail.');
+    if(c.company)req(c.company.name,'název firmy');
+    [c.name,c.email,c.street,c.city,c.zip].concat(c.company?[c.company.name,c.company.ico,c.company.dic]:[]).forEach(v=>{if(String(v||'').length>100)fail('VALIDATION','Pole smí mít nejvýše 100 znaků.')});
+    const want={};cart.forEach(l=>{want[l.variantId]=(want[l.variantId]||0)+(parseInt(l.qty,10)||0)});
+    const prods=t.get('products'),vars=t.get('variants'),items=[],short=[];
+    for(const [vid,qty] of Object.entries(want)){
+      const v=vars.find(x=>x.id===vid),p=v&&prods.find(x=>x.id===v.productId);
+      if(!v||!v.active||!p||!p.active||qty<1)fail('INVALID_ITEM','Položka už není v nabídce.',[{variantId:vid}]);
+      const av=avail(t,vid);
+      if(av<qty)short.push({variantId:vid,name:p.name,available:av,requested:qty});
+      items.push({lineId:'L'+(items.length+1),variantId:vid,skuSnapshot:v.sku,nameSnapshot:p.name+(v.attrs.color||v.attrs.size?' – '+[v.attrs.color,v.attrs.size].filter(Boolean).join(' / '):''),qty,unitPriceCents:v.priceCents,vatRate:p.vatRate});
+    }
+    if(short.length)fail('INSUFFICIENT_STOCK','Některé položky nejsou v požadovaném množství skladem.',short);
+    // zákazník: najít podle e-mailu, jinak založit
+    const customers=t.get('customers'),email=c.email.trim().toLowerCase();
+    let cu=customers.find(x=>x.email===email);
+    const addr={street:c.street.trim(),city:c.city.trim(),zip:c.zip.trim(),country:'CZ'};
+    if(cu){Object.assign(cu,{name:c.name.trim(),address:addr,company:c.company||null});cu.rev++}
+    else{cu={id:t.id('customer'),name:c.name.trim(),email,address:addr,company:c.company||null,createdAt:now(),rev:1};customers.push(cu)}
+    const actor={app:'eshop',user:cu.id};
+    // rezervace zásoby po pozicích
+    const stock=t.get('stock'),oid=t.id('order'),seq=parseInt(oid.slice(4),10),reservations=[];
+    items.forEach(it=>{
+      let need=it.qty;
+      stock.filter(s=>s.variantId===it.variantId).forEach(s=>{
+        const take=Math.min(need,s.onHand-s.reserved);if(take<=0)return;
+        s.reserved+=take;need-=take;reservations.push({variantId:it.variantId,locationId:s.locationId,qty:take});
+        t.mov({type:'RESERVE',variantId:it.variantId,locationId:s.locationId,qty:take,refType:'ORDER',refId:oid,reason:'Checkout',actor});
+      });
+    });
+    const itemsCents=items.reduce((a,i)=>a+i.qty*i.unitPriceCents,0),at=now();
+    const o={id:oid,number:new Date().getFullYear()+'-'+String(seq).padStart(5,'0'),customerId:cu.id,
+      customerSnapshot:{name:cu.name,email:cu.email,address:addr,company:cu.company},items,
+      totals:{itemsCents,shippingCents:m.cents,totalCents:itemsCents+m.cents},
+      shipping:{method:sh.method,methodName:m.name,pickupPoint:m.pickup?sh.pickupPoint:null},
+      payment:{method:sh.paymentMethod,status:'UNPAID',paidAt:null},reservations,
+      status:'NEW',statusHistory:[{from:null,to:'NEW',at,actor,reason:'Objednávka vytvořena'}],rev:1,createdAt:at,updatedAt:at};
+    t.get('orders').push(o);
+    t.ev('order.created',{type:'order',id:oid},{totalCents:o.totals.totalCents},actor);
+    transition(t,o,'AWAITING_PAYMENT','customer',actor,'Checkout dokončen, zásoba rezervována');
+    return o;
+  })},
+  payOrder(id,rev){return tx(t=>{ // simulace platby
+    const o=t.get('orders').find(x=>x.id===id);if(!o)fail('NOT_FOUND','Objednávka neexistuje.');
+    if(rev!=null&&o.rev!==rev)fail('STALE_REV','Objednávka se mezitím změnila, načtěte ji znovu.');
+    if(o.status!=='AWAITING_PAYMENT')fail('INVALID_TRANSITION','Objednávku nelze zaplatit ve stavu '+o.status+'.');
+    o.payment.status='PAID';o.payment.paidAt=now();
+    transition(t,o,'PAID','customer',{app:'eshop',user:o.customerId},'Platba přijata (simulace)');
+    return o;
+  })},
+  cancelOrder(id,reason,rev){return tx(t=>{
+    const o=t.get('orders').find(x=>x.id===id);if(!o)fail('NOT_FOUND','Objednávka neexistuje.');
+    if(rev!=null&&o.rev!==rev)fail('STALE_REV','Objednávka se mezitím změnila, načtěte ji znovu.');
+    const actor={app:'eshop',user:o.customerId};
+    transition(t,o,'CANCELLED','customer',actor,reason||'Storno zákazníkem');
+    const stock=t.get('stock');
+    o.reservations.forEach(r=>{
+      const s=stock.find(x=>x.variantId===r.variantId&&x.locationId===r.locationId);s.reserved-=r.qty;
+      t.mov({type:'RELEASE',variantId:r.variantId,locationId:r.locationId,qty:r.qty,refType:'ORDER',refId:o.id,reason:'Storno',actor});
+    });
+    o.reservations=[];
+    if(o.payment.status==='PAID')o.payment.status='REFUNDED';
+    return o;
+  })}
+};
+// session.eshop = košík + poslední zákazník (vlastní jen E-shop)
+const session={get(){const s=rd('session.eshop',{})||{};return{customerId:typeof s.customerId==='string'?s.customerId:null,cart:(Array.isArray(s.cart)?s.cart:[]).filter(l=>l&&typeof l.variantId==='string').map(l=>({variantId:l.variantId,qty:Math.max(1,parseInt(l.qty,10)||1)}))}},set(v){wr('session.eshop',v)}};
+return{
+  init(){if(!rd('meta',null))seed()},
+  reset(){Object.keys(localStorage).filter(k=>k.startsWith(P)).forEach(k=>localStorage.removeItem(k));return seed()},
+  subscribe(f){subs.push(f)},get:G,cmd,session,CATS,SHIPPING,PICKUP,STATUS
+};})();
+
+/* =====================================================================
+   UI
+   ===================================================================== */
+const $=s=>document.querySelector(s),app=$('#app');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=c=>(c/100).toLocaleString('cs-CZ',{maximumFractionDigits:2})+' Kč';
+const vlabel=v=>[v.attrs.color,v.attrs.size].filter(Boolean).join(' / ')||'Standard';
+const fmtDate=s=>new Date(s).toLocaleString('cs-CZ');
+let toastT;const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2200)};
+const st={q:'',cat:'',sort:'name',sel:null,dq:1};
+
+const priceOf=pid=>{const p=Store.get.variants(pid).map(v=>v.priceCents);if(!p.length)return '';const mn=Math.min(...p);return(Math.max(...p)>mn?'od ':'')+money(mn)};
+const availOf=pid=>Store.get.variants(pid).reduce((a,v)=>a+Store.get.available(v.id),0);
+const stockTag=n=>n<=0?'<span class="tag err">Vyprodáno</span>':n<=3?`<span class="tag warn">Poslední ${n} ks</span>`:`<span class="tag">Skladem ${n} ks</span>`;
+const ph=(p,big)=>`<div class="ph${big?' big':''}" style="--h:${+p.img.hue||0}">${esc(p.img.emoji)}</div>`;
+
+function cartLines(){
+  const s=Store.session.get();
+  return s.cart.map(l=>{const v=Store.get.variant(l.variantId),p=v&&Store.get.product(v.productId);return v&&p?{...l,v,p,av:Store.get.available(v.id)}:null}).filter(Boolean);
+}
+function updateHeader(){$('#cc').textContent=Store.session.get().cart.reduce((a,l)=>a+l.qty,0)}
+function cartSet(vid,qty){
+  const s=Store.session.get(),l=s.cart.find(c=>c.variantId===vid);
+  if(l){l.qty=qty;if(qty<=0)s.cart=s.cart.filter(c=>c!==l)}else if(qty>0)s.cart.push({variantId:vid,qty});
+  Store.session.set(s);updateHeader();
+}
+
+/* ---- katalog ---- */
+function viewCatalog(){
+  app.innerHTML=`<h1>Katalog</h1><div class="tools">
+    <input id="q" type="search" placeholder="Hledat produkt…" value="${esc(st.q)}">
+    <select id="cat"><option value="">Všechny kategorie</option>${Object.entries(Store.CATS).map(([k,n])=>`<option value="${k}"${st.cat===k?' selected':''}>${esc(n)}</option>`).join('')}</select>
+    <select id="sort"><option value="name">Řadit: název</option><option value="asc"${st.sort==='asc'?' selected':''}>Cena vzestupně</option><option value="desc"${st.sort==='desc'?' selected':''}>Cena sestupně</option></select>
+  </div><div class="grid" id="grid"></div>`;
+  drawGrid();
+}
+function drawGrid(){
+  const q=st.q.trim().toLowerCase();
+  const minP=p=>Math.min(...Store.get.variants(p.id).map(v=>v.priceCents));
+  let list=Store.get.products().filter(p=>Store.get.variants(p.id).length&&(!st.cat||p.categoryId===st.cat)&&(!q||(p.name+' '+p.description).toLowerCase().includes(q)));
+  list.sort((a,b)=>st.sort==='asc'?minP(a)-minP(b):st.sort==='desc'?minP(b)-minP(a):a.name.localeCompare(b.name,'cs'));
+  $('#grid').innerHTML=list.map(p=>`<a class="card pc" href="#/p/${esc(p.id)}">${ph(p)}<div class="in"><div>${esc(p.name)}</div><div class="price">${priceOf(p.id)}</div>${stockTag(availOf(p.id))}</div></a>`).join('')||'<p class="mut">Nic nenalezeno.</p>';
+}
+
+/* ---- detail ---- */
+function viewProduct(id){
+  const p=Store.get.product(id),vs=p?Store.get.variants(id):[];
+  if(!p||!p.active||!vs.length){app.innerHTML='<h1>Produkt nenalezen</h1><a href="#/">← Zpět do katalogu</a>';return}
+  if(!st.sel||!vs.some(v=>v.id===st.sel))st.sel=(vs.find(v=>Store.get.available(v.id)>0)||vs[0]).id,st.dq=1;
+  const v=vs.find(x=>x.id===st.sel),av=Store.get.available(v.id),inCart=(Store.session.get().cart.find(c=>c.variantId===v.id)||{qty:0}).qty;
+  st.dq=Math.max(1,Math.min(st.dq,Math.max(1,av-inCart)));
+  app.innerHTML=`<p><a href="#/">← Katalog</a></p><div class="two">${ph(p,true)}<div>
+    <h1>${esc(p.name)}</h1><div class="mut">${esc(Store.CATS[p.categoryId]||'')}</div>
+    <p>${esc(p.description)}</p><div class="price" style="font-size:1.5rem">${money(v.priceCents)}</div><div class="mut">vč. DPH ${p.vatRate} %</div>
+    <h2>Varianta</h2><div class="vars">${vs.map(x=>`<button class="${x.id===v.id?'on ':''}${Store.get.available(x.id)<=0?'x':''}" data-act="selvar" data-id="${esc(x.id)}">${esc(vlabel(x))}</button>`).join('')}</div>
+    <p>${stockTag(av)} <span class="mut">SKU ${esc(v.sku)}</span></p>
+    <div class="qty"><button class="sec" data-act="dq" data-d="-1">−</button><b>${st.dq}</b><button class="sec" data-act="dq" data-d="1">+</button>
+    <button data-act="add"${av-inCart<=0?' disabled':''}>Vložit do košíku</button></div>
+    ${inCart?`<p class="mut">V košíku už máte ${inCart} ks.</p>`:''}
+  </div></div>`;
+}
+
+/* ---- košík ---- */
+function viewCart(){
+  const ls=cartLines();
+  if(!ls.length){app.innerHTML='<h1>Košík</h1><p>Košík je prázdný.</p><a class="btn" href="#/">Do katalogu</a>';return}
+  let bad=false;
+  const total=ls.reduce((a,l)=>a+l.qty*l.v.priceCents,0);
+  app.innerHTML=`<h1>Košík</h1><table><tr><th>Produkt</th><th>Množství</th><th class="r">Cena</th><th></th></tr>${ls.map(l=>{
+    const over=l.qty>l.av;if(over)bad=true;
+    return `<tr><td><a href="#/p/${esc(l.p.id)}">${esc(l.p.name)}</a><div class="mut">${esc(vlabel(l.v))}</div>${over?`<div class="tag err">Skladem jen ${l.av} ks</div>`:''}</td>
+    <td><span class="qty"><button class="sec" data-act="cq" data-id="${esc(l.variantId)}" data-d="-1">−</button><b>${l.qty}</b><button class="sec" data-act="cq" data-id="${esc(l.variantId)}" data-d="1"${l.qty>=l.av?' disabled':''}>+</button></span></td>
+    <td class="r">${money(l.qty*l.v.priceCents)}</td><td class="r"><button class="sec" data-act="cdel" data-id="${esc(l.variantId)}" title="Odstranit">✕</button></td></tr>`}).join('')}</table>
+    <div class="sum card" style="max-width:360px;margin:16px 0 0 auto"><div><span>Zboží</span><span>${money(total)}</span></div><div class="mut"><span>Doprava</span><span>v dalším kroku</span></div>
+    <a class="btn" style="width:100%;text-align:center;margin-top:10px;${bad?'pointer-events:none;opacity:.45':''}" href="#/checkout">Pokračovat k objednávce</a></div>`;
+}
+
+/* ---- checkout ---- */
+function viewCheckout(){
+  const ls=cartLines();
+  if(!ls.length){location.hash='#/cart';return}
+  const s=Store.session.get(),cu=s.customerId&&Store.get.customer(s.customerId),a=cu?cu.address:{},co=cu&&cu.company;
+  const f=(l,n,v,t='text',x='')=>`<div class="f"><label for="${n}">${l}</label><input id="${n}" name="${n}" type="${t}" maxlength="100" value="${esc(v||'')}" ${x}></div>`;
+  app.innerHTML=`<p><a href="#/cart">← Zpět do košíku</a></p><h1>Objednávka</h1><form id="co" class="co" novalidate><div>
+    <div id="err"></div>
+    <h2>Kontakt a adresa</h2>
+    ${f('Jméno a příjmení','name',cu&&cu.name,'text','required autocomplete="name"')}
+    ${f('E-mail','email',cu&&cu.email,'email','required autocomplete="email"')}
+    ${f('Ulice a č. p.','street',a.street,'text','required autocomplete="street-address"')}
+    <div class="row2">${f('Město','city',a.city,'text','required')}${f('PSČ','zip',a.zip,'text','required autocomplete="postal-code"')}</div>
+    <label class="opt"><input type="checkbox" id="isco"${co?' checked':''}><span>Nakupuji na firmu</span></label>
+    <div id="cobox" style="display:${co?'block':'none'}">${f('Název firmy','coname',co&&co.name)}<div class="row2">${f('IČO','ico',co&&co.ico)}${f('DIČ','dic',co&&co.dic)}</div></div>
+    <h2>Doprava</h2>${Object.entries(Store.SHIPPING).map(([k,m],i)=>`<label class="opt"><input type="radio" name="ship" value="${k}"${i===0?' checked':''}><span>${esc(m.name)}</span><span>${m.cents?money(m.cents):'zdarma'}</span></label>`).join('')}
+    <div class="f" id="pickbox" style="display:none"><label for="pickup">Výdejní místo</label><select id="pickup">${Store.PICKUP.map(p=>`<option>${esc(p)}</option>`).join('')}</select></div>
+    <h2>Platba</h2>
+    <label class="opt"><input type="radio" name="pay" value="card" checked><span>Platební karta (simulace)</span></label>
+    <label class="opt"><input type="radio" name="pay" value="transfer"><span>Bankovní převod (simulace)</span></label>
+  </div><div class="card sum"><h2 style="margin-top:0">Souhrn</h2>${ls.map(l=>`<div><span>${l.qty}× ${esc(l.p.name)} <span class="mut">${esc(vlabel(l.v))}</span></span><span>${money(l.qty*l.v.priceCents)}</span></div>`).join('')}
+    <div id="tot"></div><button type="submit" id="cta" style="width:100%;margin-top:12px">Objednat s povinností platby</button>
+    <p class="mut"><b>Platba zatím neproběhne.</b> Po odeslání vznikne objednávka ve stavu „Čeká na platbu“ a zásobu vám rezervujeme. Zaplatit ji můžete hned na další stránce (platba je jen simulace).</p>
+    <a href="#/cart" class="btn sec" style="width:100%;text-align:center">← Zpět do košíku</a></div></form>`;
+  calcTotals();
+}
+function calcTotals(){
+  const sel=document.querySelector('input[name=ship]:checked');if(!sel)return;
+  const items=cartLines().reduce((a,l)=>a+l.qty*l.v.priceCents,0),sh=Store.SHIPPING[sel.value];
+  $('#pickbox').style.display=sh.pickup?'grid':'none';
+  $('#tot').innerHTML=`<div><span>Zboží</span><span>${money(items)}</span></div><div><span>Doprava</span><span>${sh.cents?money(sh.cents):'zdarma'}</span></div><div class="t"><span>Celkem k úhradě</span><span>${money(items+sh.cents)}</span></div>`;
+  $('#cta').textContent='Objednat s povinností platby · '+money(items+sh.cents);
+}
+function submitCheckout(){
+  const g=id=>$('#'+id).value,sel=n=>document.querySelector(`input[name=${n}]:checked`).value;
+  const cust={name:g('name'),email:g('email'),street:g('street'),city:g('city'),zip:g('zip'),
+    company:$('#isco').checked?{name:g('coname'),ico:g('ico'),dic:g('dic')}:null};
+  const r=Store.cmd.createOrder(Store.session.get().cart,cust,{method:sel('ship'),pickupPoint:g('pickup'),paymentMethod:sel('pay')});
+  if(!r.ok){
+    let extra='';
+    if(r.code==='INSUFFICIENT_STOCK')extra='<ul>'+r.data.map(d=>`<li>${esc(d.name)}: skladem ${d.available} ks, požadováno ${d.requested} ks</li>`).join('')+'</ul><a href="#/cart">Upravit košík</a>';
+    $('#err').innerHTML=`<div class="alert" role="alert"><b>${esc(r.message)}</b>${extra}</div>`;
+    window.scrollTo({top:0,behavior:'smooth'});return;
+  }
+  const s=Store.session.get();s.cart=[];s.customerId=r.data.customerId;Store.session.set(s);updateHeader();
+  toast('Objednávka '+r.data.number+' vytvořena – čeká na platbu');location.hash='#/order/'+r.data.id;
+}
+
+/* ---- objednávka ---- */
+const STEPS=[['Objednáno','AWAITING_PAYMENT'],['Zaplaceno','PAID'],['Předáno skladu','HANDED_TO_WAREHOUSE'],['Vybavuje se','PICKING'],['Zabaleno','PACKED'],['Odesláno','SHIPPED'],['Doručeno','DELIVERED']];
+function viewOrder(id){
+  const o=Store.get.order(id);
+  if(!o){app.innerHTML='<h1>Objednávka nenalezena</h1><a href="#/orders">← Moje objednávky</a>';return}
+  const flow=STEPS.map(s=>s[1]),rank=['RETURN_REQUESTED','RETURNED'].includes(o.status)?6:flow.indexOf(o.status);
+  const shp=Store.get.shipment(o.id),c=o.customerSnapshot;
+  app.innerHTML=`<p><a href="#/orders">← Moje objednávky</a></p><h1>Objednávka ${esc(o.number)} <span class="tag${o.status==='CANCELLED'?' err':''}">${esc(Store.STATUS[o.status])}</span></h1>
+  ${o.status==='AWAITING_PAYMENT'?`<div class="note"><b>Objednávka je vytvořena, ale ještě není zaplacená.</b> Způsob platby: ${o.payment.method==='card'?'karta':'převod'}. Zásoba je pro vás rezervovaná, dokud objednávku nezaplatíte nebo nestornujete. <button data-act="pay" data-id="${esc(o.id)}" data-rev="${esc(o.rev)}" style="margin-left:8px">Zaplatit (simulace)</button></div>`:''}
+  ${o.status==='CANCELLED'?'<div class="alert">Objednávka byla stornována.'+(o.payment.status==='REFUNDED'?' Platba je vrácena (simulace).':'')+'</div>':`<ul class="tl">${STEPS.map(([l],i)=>`<li class="${rank>=i?'d':''}">${rank>=i?'✓':'○'} ${l}</li>`).join('')}</ul>`}
+  ${['RETURN_REQUESTED','RETURNED'].includes(o.status)?`<div class="note">Stav vrácení: ${esc(Store.STATUS[o.status])}</div>`:''}
+  ${shp?`<p>Dopravce: <b>${esc(shp.carrier)}</b> · sledovací číslo: <b>${esc(shp.trackingNo)}</b></p>`:''}
+  <table><tr><th>Položka</th><th>Ks</th><th class="r">Cena</th></tr>${o.items.map(i=>`<tr><td>${esc(i.nameSnapshot)}<div class="mut">${esc(i.skuSnapshot)}</div></td><td>${i.qty}</td><td class="r">${money(i.qty*i.unitPriceCents)}</td></tr>`).join('')}</table>
+  <div class="sum card" style="max-width:360px;margin:16px 0 0 auto"><div><span>Zboží</span><span>${money(o.totals.itemsCents)}</span></div><div><span>Doprava</span><span>${o.totals.shippingCents?money(o.totals.shippingCents):'zdarma'}</span></div><div class="t"><span>Celkem</span><span>${money(o.totals.totalCents)}</span></div></div>
+  <div class="two" style="margin-top:20px"><div class="card"><b>Doručení</b><div>${esc(o.shipping.methodName)}${o.shipping.pickupPoint?'<br>'+esc(o.shipping.pickupPoint):''}</div><div class="mut">${esc(c.name)}<br>${esc(c.address.street)}, ${esc(c.address.zip)} ${esc(c.address.city)}<br>${esc(c.email)}${c.company?'<br>'+esc(c.company.name)+(c.company.ico?' · IČO '+esc(c.company.ico):''):''}</div></div>
+  <div class="card"><b>Platba</b><div>${o.payment.status==='PAID'?'Zaplaceno '+esc(fmtDate(o.payment.paidAt)):o.payment.status==='REFUNDED'?'Vráceno':'<b>Nezaplaceno</b> – čeká na platbu'}</div></div></div>
+  ${['AWAITING_PAYMENT','PAID'].includes(o.status)?`<p><button class="dng" data-act="cancel" data-id="${esc(o.id)}" data-rev="${esc(o.rev)}">Stornovat objednávku</button></p>`:''}
+  <details><summary>Historie stavů</summary><table>${o.statusHistory.map(h=>`<tr><td>${esc(fmtDate(h.at))}</td><td>${esc(Store.STATUS[h.to])}</td><td class="mut">${esc(h.reason||'')}</td></tr>`).join('')}</table></details>`;
+}
+function viewOrders(){
+  const cid=Store.session.get().customerId,os=cid?Store.get.ordersOf(cid):[];
+  app.innerHTML=`<h1>Moje objednávky</h1>`+(os.length?`<table><tr><th>Číslo</th><th>Datum</th><th>Stav</th><th class="r">Celkem</th></tr>${os.map(o=>`<tr><td><a href="#/order/${esc(o.id)}">${esc(o.number)}</a></td><td>${esc(fmtDate(o.createdAt))}</td><td>${esc(Store.STATUS[o.status])}</td><td class="r">${money(o.totals.totalCents)}</td></tr>`).join('')}</table>`:'<p class="mut">Zatím nemáte žádnou objednávku. (Objednávky se přiřazují podle posledního použitého e-mailu v tomto prohlížeči – bez přihlášení.)</p>');
+}
+
+/* ---- router ---- */
+function render(){
+  const [,r,a]=(location.hash||'#/').split('/');
+  updateHeader();
+  if(r==='p')viewProduct(a);else if(r==='cart')viewCart();else if(r==='checkout')viewCheckout();
+  else if(r==='order')viewOrder(a);else if(r==='orders')viewOrders();else viewCatalog();
+}
+addEventListener('hashchange',()=>{window.scrollTo(0,0);render()});
+// změna dat z jiné aplikace/tabu: překreslit (checkout nechat být, ať se nesmaže rozepsaný formulář)
+Store.subscribe(()=>{if((location.hash||'').startsWith('#/checkout'))updateHeader();else render()});
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const act=b.dataset.act,id=b.dataset.id,d=+b.dataset.d;
+  if(act==='reset'){e.preventDefault();if(confirm('Smazat všechna data ecs.v1.* a nahrát demo data? Ovlivní i Admin a Sklad.')){Store.reset();location.hash='#/';render();toast('Demo data obnovena')}return}
+  if(act==='selvar'){st.sel=id;st.dq=1;render()}
+  else if(act==='dq'){st.dq+=d;render()}
+  else if(act==='add'){
+    const s=Store.session.get(),l=s.cart.find(c=>c.variantId===st.sel),have=l?l.qty:0,av=Store.get.available(st.sel);
+    const n=Math.min(av,have+st.dq);if(n<=have){toast('Více kusů už není skladem');return}
+    cartSet(st.sel,n);st.dq=1;toast('Vloženo do košíku');render();
+  }
+  else if(act==='cq'){const l=cartLines().find(x=>x.variantId===id);if(l)cartSet(id,Math.max(1,Math.min(l.av,l.qty+d)));render()}
+  else if(act==='cdel'){cartSet(id,0);render()}
+  else if(act==='pay'){const r=Store.cmd.payOrder(id,+b.dataset.rev);toast(r.ok?'Platba přijata (simulace)':r.message);render()}
+  else if(act==='cancel'){if(confirm('Opravdu stornovat objednávku?')){const r=Store.cmd.cancelOrder(id,'Storno zákazníkem',+b.dataset.rev);toast(r.ok?'Objednávka stornována, rezervace uvolněna':r.message);render()}}
+});
+document.addEventListener('input',e=>{
+  if(e.target.id==='q'){st.q=e.target.value;drawGrid()}
+  if(e.target.id==='isco')$('#cobox').style.display=e.target.checked?'block':'none';
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='cat'){st.cat=e.target.value;drawGrid()}
+  if(e.target.id==='sort'){st.sort=e.target.value;drawGrid()}
+  if(e.target.name==='ship')calcTotals();
+  if(e.target.id==='isco')$('#cobox').style.display=e.target.checked?'block':'none';
+});
+document.addEventListener('submit',e=>{if(e.target.id==='co'){e.preventDefault();submitCheckout()}});
+
+try{Store.init();render();
+  if(location.protocol==='file:')app.insertAdjacentHTML('afterbegin','<div class="note">Běžíte z <code>file://</code> – localStorage se mezi soubory nemusí sdílet. Pro propojení s Adminem a Skladem spusťte <code>python -m http.server 8000</code>.</div>');
+}catch(err){app.innerHTML='<h1>Úložiště není dostupné</h1><p class="alert">'+esc(err.message)+'</p>'}
+</script>
+</body>
+</html>

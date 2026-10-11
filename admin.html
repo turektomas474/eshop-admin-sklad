@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin – Mini E-shop</title>
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<header><div class="bar"><span class="logo">🛠 Admin</span><nav id="nav"></nav><span class="sp mut">role: admin (simulace)</span></div></header>
+<main id="app"></main>
+<div id="toast"></div>
+<script src="store.js"></script>
+<script>
+const $=s=>document.querySelector(s),app=$('#app'),C=Store.get.col;
+const TABS=[['dash','Přehled'],['orders','Objednávky'],['products','Produkty'],['customers','Zákazníci'],['stock','Sklad']];
+let tab='dash',sel=null,flt='',toastT;
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2400)};
+const tag=s=>`<span class="tag${s==='CANCELLED'?' err':['AWAITING_PAYMENT','NEW'].includes(s)?' warn':['PAID','DELIVERED','PACKED','SHIPPED'].includes(s)?' ok':''}">${esc(Store.STATUS[s]||s)}</span>`;
+const tbl=(h,r,cls='')=>`<div class="wrap"><table class="${cls}"><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${r.join('')||`<tr><td colspan="${h.length}" class="mut">Žádná data.</td></tr>`}</table></div>`;
+const isToday=s=>s&&new Date(s).toDateString()===new Date().toDateString();
+
+function dash(){
+  const os=C('orders'),vs=C('variants').filter(v=>v.active);
+  const today=os.filter(o=>isToday(o.createdAt)).length;
+  const rev=os.filter(o=>o.payment.status==='PAID'&&isToday(o.payment.paidAt)).reduce((a,o)=>a+o.totals.totalCents,0);
+  const wait=os.filter(o=>o.status==='PAID').length,inWh=os.filter(o=>['HANDED_TO_WAREHOUSE','PICKING'].includes(o.status)).length;
+  const low=vs.map(v=>({v,av:Store.get.available(v.id)})).filter(x=>x.av<=3).sort((a,b)=>a.av-b.av);
+  app.innerHTML=`<h1>Přehled</h1><div class="kpis">
+    <div class="card kpi"><div class="mut">Objednávky dnes</div><div class="n">${today}</div></div>
+    <div class="card kpi"><div class="mut">Zaplaceno dnes</div><div class="n">${money(rev)}</div></div>
+    <div class="card kpi"><div class="mut">Zaplacené, nepředané skladu</div><div class="n">${wait}</div></div>
+    <div class="card kpi"><div class="mut">Ve skladu (předané / picking)</div><div class="n">${inWh}</div></div></div>
+    <h2>⚠ Nízké zásoby (dostupné ≤ 3 ks)</h2>${tbl(['Produkt','SKU','Dostupné'],low.map(x=>`<tr><td>${esc(Store.get.vname(x.v.id))}</td><td>${esc(x.v.sku)}</td><td><span class="tag ${x.av<=0?'err':'warn'}">${x.av} ks</span></td></tr>`))}
+    <h2>Poslední objednávky</h2>${tbl(['Číslo','Datum','Stav','Celkem'],os.slice(-8).reverse().map(o=>`<tr class="click" data-act="open" data-id="${esc(o.id)}"><td>${esc(o.number)}</td><td>${esc(fmtDate(o.createdAt))}</td><td>${tag(o.status)}</td><td class="r">${money(o.totals.totalCents)}</td></tr>`))}`;
+}
+
+function orders(){
+  const os=C('orders').slice().reverse().filter(o=>!flt||o.status===flt);
+  const sx=sel&&C('orders').find(o=>o.id===sel);
+  app.innerHTML=`<h1>Objednávky</h1><div class="row"><select id="flt" style="max-width:260px"><option value="">Všechny stavy</option>${Object.entries(Store.STATUS).map(([k,n])=>`<option value="${k}"${flt===k?' selected':''}>${esc(n)}</option>`).join('')}</select><span class="mut">${os.length} objednávek</span></div>`
+   +tbl(['Číslo','Datum','Zákazník','Stav','Platba','Celkem'],os.map(o=>`<tr class="click${o.id===sel?' sel':''}" data-act="sel" data-id="${esc(o.id)}"><td>${esc(o.number)}<div class="mut">${esc(o.id)}</div></td><td>${esc(fmtDate(o.createdAt))}</td><td>${esc(o.customerSnapshot.name)}</td><td>${tag(o.status)}</td><td>${esc(o.payment.status)}</td><td class="r">${money(o.totals.totalCents)}</td></tr>`))
+   +(sx?detail(sx):'<p class="mut">Klikněte na objednávku pro detail a akce.</p>');
+}
+function detail(o){
+  const c=o.customerSnapshot,a=c.address,tk=C('tasks').find(t=>t.orderId===o.id&&t.status!=='CANCELLED'),sp=C('shipments').find(s=>s.orderId===o.id);
+  const canCancel=['NEW','AWAITING_PAYMENT','PAID','HANDED_TO_WAREHOUSE'].includes(o.status);
+  return `<div class="card" style="margin-top:14px"><h2 style="margin-top:0">Objednávka ${esc(o.number)} ${tag(o.status)}</h2>
+  <div class="row">${o.status==='PAID'?`<button data-act="hand" data-id="${esc(o.id)}">Předat skladu</button>`:''}${canCancel?`<button class="dng" data-act="cancel" data-id="${esc(o.id)}">Stornovat</button>`:''}
+  ${o.status==='AWAITING_PAYMENT'?'<span class="mut">Čeká na platbu zákazníka – předat skladu lze až po zaplacení.</span>':''}</div>
+  ${tbl(['Položka','SKU','Ks','Cena'],o.items.map(i=>`<tr><td>${esc(i.nameSnapshot)}</td><td>${esc(i.skuSnapshot)}</td><td>${i.qty}</td><td class="r">${money(i.qty*i.unitPriceCents)}</td></tr>`))}
+  <p>Zboží ${money(o.totals.itemsCents)} + doprava ${money(o.totals.shippingCents)} = <b>${money(o.totals.totalCents)}</b> · platba: ${esc(o.payment.method)} / ${esc(o.payment.status)}${o.payment.paidAt?' ('+esc(fmtDate(o.payment.paidAt))+')':''}</p>
+  <p><b>${esc(c.name)}</b> · ${esc(c.email)}<br>${esc(a.street)}, ${esc(a.zip)} ${esc(a.city)}${c.company?'<br>'+esc(c.company.name)+(c.company.ico?' · IČO '+esc(c.company.ico):''):''}<br><span class="mut">Doprava: ${esc(o.shipping.methodName)}${o.shipping.pickupPoint?' – '+esc(o.shipping.pickupPoint):''}</span></p>
+  ${tk?`<p class="mut">Skladová úloha ${esc(tk.id)}: ${esc(tk.status)}${tk.batchId?' · batch '+esc(tk.batchId):''}</p>`:''}${sp?`<p class="mut">Expedice ${esc(sp.carrier)} · ${esc(sp.trackingNo)}</p>`:''}
+  <details><summary>Historie stavů</summary>${tbl(['Kdy','Změna','Kdo','Důvod'],o.statusHistory.map(h=>`<tr><td>${esc(fmtDate(h.at))}</td><td>${esc(h.from||'–')} → ${esc(h.to)}</td><td>${esc(h.actor&&h.actor.app)}</td><td class="mut">${esc(h.reason||'')}</td></tr>`))}</details></div>`;
+}
+
+function products(){
+  const vs=C('variants');
+  app.innerHTML=`<h1>Produkty</h1>`+C('products').map(p=>`<div class="card"><b>${esc(p.name)}</b> <span class="mut">${esc(p.id)} · ${esc(p.categoryId)} · DPH ${esc(p.vatRate)} %</span> <span class="tag ${p.active?'ok':'err'}">${p.active?'aktivní':'neaktivní'}</span><p class="mut">${esc(p.description)}</p>
+   ${tbl(['Varianta','SKU','EAN','Cena','Dostupné'],vs.filter(v=>v.productId===p.id).map(v=>{const av=Store.get.available(v.id);return `<tr><td>${esc(Store.get.vname(v.id))}<div class="mut">${esc(v.id)}</div></td><td>${esc(v.sku)}</td><td>${esc(v.ean)}</td><td>${money(v.priceCents)}</td><td><span class="tag ${av<=0?'err':av<=3?'warn':''}">${av} ks</span></td></tr>`}))}</div>`).join('');
+}
+
+function customers(){
+  const os=C('orders');
+  app.innerHTML=`<h1>Zákazníci</h1>`+tbl(['ID','Jméno','E-mail','Adresa','Firma','Objednávky','Útrata'],C('customers').map(c=>{
+    const mine=os.filter(o=>o.customerId===c.id),sum=mine.filter(o=>o.status!=='CANCELLED').reduce((a,o)=>a+o.totals.totalCents,0);
+    return `<tr><td>${esc(c.id)}</td><td>${esc(c.name)}</td><td>${esc(c.email)}</td><td>${esc(c.address.street)}, ${esc(c.address.zip)} ${esc(c.address.city)}</td><td>${c.company?esc(c.company.name)+(c.company.ico?' · '+esc(c.company.ico):''):'–'}</td><td>${mine.length}</td><td class="r">${money(sum)}</td></tr>`}));
+}
+
+function stock(){
+  app.innerHTML=`<h1>Stav skladu</h1><p class="mut">Dostupné = skladem − rezervováno. Zásobu zde nelze přepsat; mění ji jen skladové operace.</p>`
+   +tbl(['Produkt / varianta','SKU','EAN','Pozice','Skladem','Rezervováno','Dostupné'],C('stock').map(s=>{const v=Store.get.variant(s.variantId)||{},av=s.onHand-s.reserved;return `<tr><td>${esc(Store.get.vname(s.variantId))}</td><td>${esc(v.sku)}</td><td>${esc(v.ean)}</td><td>${esc(s.locationId)}</td><td>${s.onHand}</td><td>${s.reserved}</td><td><span class="tag ${av<=0?'err':av<=3?'warn':''}">${av}</span></td></tr>`}))
+   +`<h2>Skladový deník (posledních 30 pohybů)</h2>`+tbl(['ID','Kdy','Typ','Varianta','Pozice','Ks','Reference','Důvod'],C('movements').slice(-30).reverse().map(m=>`<tr><td>${esc(m.id)}</td><td>${esc(fmtDate(m.at))}</td><td><span class="tag">${esc(m.type)}</span></td><td>${esc(Store.get.vname(m.variantId))}</td><td>${esc(m.locationId)}</td><td>${m.qty}</td><td>${esc(m.refId||'–')}</td><td class="mut">${esc(m.reason||'')}</td></tr>`));
+}
+
+function render(){
+  if(!Store.get.ready()){app.innerHTML='<div class="alert">V úložišti nejsou žádná data. Otevřete nejdřív <a href="mini-eshop.html">mini-eshop.html</a> (nahraje demo data) ze stejného originu a složky.</div>';return}
+  $('#nav').innerHTML=TABS.map(([k,n])=>`<a href="#" class="${k===tab?'on':''}" data-act="tab" data-id="${k}">${n}</a>`).join('');
+  ({dash,orders,products,customers,stock})[tab]();
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const act=b.dataset.act,id=b.dataset.id;if(b.tagName==='A')e.preventDefault();
+  if(act==='tab'){tab=id;render()}
+  else if(act==='open'){tab='orders';sel=id;render()}
+  else if(act==='sel'){sel=sel===id?null:id;render()}
+  else if(act==='hand'){const r=Store.cmd.handToWarehouse(id,'admin');toast(r.ok?'Předáno skladu – vznikla úloha '+r.data.id:r.message);render()}
+  else if(act==='cancel'&&confirm('Opravdu stornovat objednávku? Uvolní se rezervace zásoby.')){const r=Store.cmd.cancelOrder(id,'Storno administrátorem','admin','admin');toast(r.ok?'Objednávka stornována':r.message);render()}
+});
+document.addEventListener('change',e=>{if(e.target.id==='flt'){flt=e.target.value;render()}});
+Store.subscribe(render);
+render();
+</script>
+</body>
+</html>
